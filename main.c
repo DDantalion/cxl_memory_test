@@ -11,7 +11,7 @@
 #include "util.h"
 
 ////////////////////////////////////////////////////////////////////////////////
-
+static double v4time[25];
 inline
 void
 // Attribution: https://github.com/IAIK/flush_flush/blob/master/sc/cacheutils.h
@@ -69,8 +69,11 @@ uint32_t memaccesstime(char *v, uint64_t size) {
                "rdtscp\n"
                "mov %%eax, %%esi\n"
             "LOOP_access: \n"
+              "lfence\n"
               "mov (%1), %%eax\n"
-              //"clflush 0(%1) \n" 
+              "mfence\n"
+              "lfence\n"
+              "clflush 0(%1) \n" 
               "add $0x40, %1\n"
               "inc %%r10 \n"
               "cmp %2, %%r10 \n"
@@ -92,8 +95,11 @@ uint32_t memaccesstime_s(char *v, uint64_t size) {
                "rdtscp\n"
                "mov %%eax, %%esi\n"
             "LOOP_access_s: \n"
-              "movl $10, (%1)\n\t"
-              //"clflush 0(%1) \n" 
+            "sfence\n"
+              "movl $10, (%1)\n"
+              "mfence\n"
+               "sfence\n"
+              "clflush 0(%1) \n" 
               "add $0x40, %1\n"
               "inc %%r10 \n"
               "cmp %2, %%r10 \n"
@@ -185,7 +191,7 @@ time_mread_nofence(void *adrs)
   return (int) time;
 }
 
-int m_test(long int buf_size,long int count){
+int m_test(long int buf_size,long int count, int m){
 uint32_t t_time;
 double avg_time = 0;
     int ret;
@@ -210,12 +216,10 @@ double avg_time = 0;
     }
     cfg->start_addr_a = &(cfg->buf_a[0]);
     disable_prefetch(cfg->core_a);
-    for (int i=0; i<1000; i++){
     t_time = memaccesstime(cfg->start_addr_a, iter_count);
     avg_time += (((double) t_time)/1000);
-    }
+    v4time[m]+=(avg_time/50);
     enable_prefetch(cfg->core_a);
-    printf("%f ",avg_time);
     goto out1;
 
 out1:
@@ -227,8 +231,19 @@ out:
 }
 
 int main(){
+FILE *file;
+file = fopen("output.txt", "a");
+for (int x=0; x<50; x++){
+int m = 0;
 for(long int j=1; j<30000000; j=(j*2)){
-m_test(4000000000, j);
+m_test(4000000000, j, m);
+m=m+1;
 }
+}
+for (int i = 0; i < 25; i++) {
+  printf("v4time[%d] = %.2f\n", i, v4time[i]);  // Print to stdout
+  fprintf(file, "v4time[%d] = %.2f\n", i, v4time[i]);  // Print to file
+}
+fclose(file);
 return 0;
 }
