@@ -217,7 +217,7 @@ double avg_time = 0;
     cfg->start_addr_a = &(cfg->buf_a[0]);
     disable_prefetch(cfg->core_a);
     t_time = memaccesstime(cfg->start_addr_a, iter_count);
-    avg_time += (((double) t_time)/1000);
+    avg_time += (((double) t_time));
     v4time[m]+=(avg_time/50);
     enable_prefetch(cfg->core_a);
     goto out1;
