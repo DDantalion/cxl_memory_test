@@ -241,8 +241,8 @@ m=m+1;
 }
 }
 for (int i = 0; i < 25; i++) {
-  printf("v4time[%d] = %.2f\n", i, v4time[i]);  // Print to stdout
-  fprintf(file, "v4time[%d] = %.2f\n", i, v4time[i]);  // Print to file
+  printf("%f ", v4time[i]);  // Print to stdout
+  fprintf(file, "%f ", v4time[i]);  // Print to file
 }
 fclose(file);
 return 0;
