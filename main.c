@@ -11,7 +11,7 @@
 #include "util.h"
 
 ////////////////////////////////////////////////////////////////////////////////
-static double v4time[6][25];
+static double v4time[5][24];
 inline
 void
 // Attribution: https://github.com/IAIK/flush_flush/blob/master/sc/cacheutils.h
@@ -81,8 +81,8 @@ uint32_t memaccesstime(char *v, uint64_t size, uint64_t stride) {
                "rdtscp\n"
                "sub %%esi, %%eax\n"
                : "=&a"(rv)
-               : "r"(v), "r" (size)
-               : "ecx", "edx", "esi","%r10");
+               : "r"(v), "r" (size), "r"(stride)
+               : "ecx", "edx", "esi", "%r10");
                return rv;
 }
 
@@ -235,17 +235,17 @@ FILE *file;
 file = fopen("output.txt", "a");
 for (int x=0; x<50; x++){
 int s_index = 0;
-for (int stride_m=1; stride_m<33; stride_m = (stride_m * 2)){
+for (int stride_m=1; stride_m<17; stride_m = (stride_m * 2)){
 int m = 0;
 for(long int j=1; j<10000000; j=(j*2)){
-m_test(40000000000, j, m, stride_m, s_index);
+m_test(14000000000, j, m, stride_m, s_index);
 m=m+1;
 }
 s_index++;
 }
 }
-for (int y = 0; y<6; y++){
-for (int i = 0; i < 25; i++) {
+for (int y = 0; y<5; y++){
+for (int i = 0; i < 24; i++) {
   printf("%f ", v4time[y][i]);  // Print to stdout
   fprintf(file, "%f ", v4time[y][i]);  // Print to file
 }
