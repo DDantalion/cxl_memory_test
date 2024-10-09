@@ -91,6 +91,19 @@ int init_buf(uint64_t size, int node, char** alloc_ptr) {
     return 0;
 }
 
+// int init_buffer(uint64_t size,char** ptr2){
+//     char *ptr;
+//     ptr = *ptr2;
+//     page_size = (unsigned long)getpagesize();
+//     page_cnt = (size / page_size);
+//     idx = 0;
+//     for (uint64_t i = 0; i < page_cnt; i++) {
+//         ptr[idx] = 0;	
+//         idx += page_size;
+//     }
+//     return 0;
+// }
+
 uint64_t read_MSR(int cpu){
     int fd;
     uint64_t data;

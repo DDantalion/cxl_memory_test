@@ -11,7 +11,7 @@
 #include "util.h"
 
 ////////////////////////////////////////////////////////////////////////////////
-static double v4time[25];
+static double v4time[6][25];
 inline
 void
 // Attribution: https://github.com/IAIK/flush_flush/blob/master/sc/cacheutils.h
@@ -60,7 +60,7 @@ uint64_t rdtscp64() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-uint32_t memaccesstime(char *v, uint64_t size) {
+uint32_t memaccesstime(char *v, uint64_t size, uint64_t stride) {
   uint32_t rv;
   asm volatile(
                 "xor %%r10, %%r10 \n"
@@ -74,7 +74,7 @@ uint32_t memaccesstime(char *v, uint64_t size) {
               "clflush 0(%1) \n" 
               "mfence\n"
               "lfence\n"
-              "add $0x40, %1\n"
+              "add %3, %1\n"
               "inc %%r10 \n"
               "cmp %2, %%r10 \n"
             "jl LOOP_access \n"
@@ -86,33 +86,31 @@ uint32_t memaccesstime(char *v, uint64_t size) {
                return rv;
 }
 
-uint32_t memaccesstime_s(char *v, uint64_t size) {
+uint32_t memaccesstime_s(char *v, uint64_t size, uint64_t stride) {
   uint32_t rv;
   asm volatile(
                 "xor %%r10, %%r10 \n"
                 "mfence\n"
-               "sfence\n"
-               "rdtscp\n"
-               "mov %%eax, %%esi\n"
+                "sfence\n"
+                "rdtscp\n"
+                "mov %%eax, %%esi\n"
             "LOOP_access_s: \n"
             "sfence\n"
               "movl $10, (%1)\n"
               "clflush 0(%1) \n" 
               "mfence\n"
                "sfence\n"
-              "add $0x40, %1\n"
+              "add %3, %1\n"
               "inc %%r10 \n"
               "cmp %2, %%r10 \n"
             "jl LOOP_access_s \n"
                "rdtscp\n"
                "sub %%esi, %%eax\n"
                : "=&a"(rv)
-               : "r"(v), "r" (size)
-               : "ecx", "edx", "esi","%r10");
-               return rv;
+               : "r"(v), "r" (size), "r"(stride)
+               : "ecx", "edx", "esi", "%r10");
+  return rv;
 }
-
-
 
 
 
@@ -191,9 +189,11 @@ time_mread_nofence(void *adrs)
   return (int) time;
 }
 
-int m_test(long int buf_size,long int count, int m){
-uint32_t t_time;
-double avg_time = 0;
+int m_test(long int buf_size,long int count, int m, int stride_m, int s_index){
+    uint32_t t_time;
+    uint64_t stride = 0x40;
+    stride = stride * (uint64_t)stride_m;
+    double avg_time = 0;
     int ret;
     uint64_t iter_count;
     iter_count= (uint64_t)count;
@@ -216,9 +216,9 @@ double avg_time = 0;
     }
     cfg->start_addr_a = &(cfg->buf_a[0]);
     disable_prefetch(cfg->core_a);
-    t_time = memaccesstime(cfg->start_addr_a, iter_count);
+    t_time = memaccesstime_s(cfg->start_addr_a, iter_count, stride);
     avg_time += (((double) t_time));
-    v4time[m]+=(avg_time/50);
+    v4time[s_index][m]+=(avg_time/50);
     enable_prefetch(cfg->core_a);
     goto out1;
 
@@ -234,15 +234,23 @@ int main(){
 FILE *file;
 file = fopen("output.txt", "a");
 for (int x=0; x<50; x++){
+int s_index = 0;
+for (int stride_m=1; stride_m<33; stride_m = (stride_m * 2)){
 int m = 0;
 for(long int j=1; j<30000000; j=(j*2)){
-m_test(4000000000, j, m);
+m_test(4000000000, j, m, stride_m, s_index);
 m=m+1;
 }
+s_index++;
 }
+}
+for (int y = 0; y<6; y++){
 for (int i = 0; i < 25; i++) {
-  printf("%f ", v4time[i]);  // Print to stdout
-  fprintf(file, "%f ", v4time[i]);  // Print to file
+  printf("%f ", v4time[y][i]);  // Print to stdout
+  fprintf(file, "%f ", v4time[y][i]);  // Print to file
+}
+  printf("\t");  // Print to stdout
+  fprintf(file, "\t");  // Print to file
 }
 fclose(file);
 return 0;
