@@ -237,8 +237,8 @@ for (int x=0; x<50; x++){
 int s_index = 0;
 for (int stride_m=1; stride_m<33; stride_m = (stride_m * 2)){
 int m = 0;
-for(long int j=1; j<10000000; j=(j*2)){
-m_test(40000000000, j, m, stride_m, s_index);
+for(long int j=1; j<30000000; j=(j*2)){
+m_test(4000000000, j, m, stride_m, s_index);
 m=m+1;
 }
 s_index++;
