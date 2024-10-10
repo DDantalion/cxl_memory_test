@@ -293,7 +293,7 @@ int m_test(long int buf_size,long int count, int m, int stride_m, int s_index){
     disable_prefetch(cfg->core_a);
     t_time = memaccesstime_p(cfg->start_addr_a, iter_count, stride, offset_list);
     avg_time += (((double) t_time));
-    v4time[s_index][m]+=(avg_time/50);
+    v4time[s_index][m]+=(avg_time);
     enable_prefetch(cfg->core_a);
     goto out1;
 
@@ -308,7 +308,7 @@ out:
 int main(){
 FILE *file;
 file = fopen("output.txt", "a");
-for (int x=0; x<50; x++){
+for (int x=0; x<1; x++){
 int s_index = 0;
 for (int stride_m=1; stride_m<17; stride_m = (stride_m * 2)){
 int m = 0;
