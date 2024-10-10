@@ -278,7 +278,7 @@ int m_test(long int buf_size,long int count, int m, int stride_m, int s_index){
     cfg->start_addr_a = &(cfg->buf_a[0]);
     disable_prefetch(cfg->core_a);
     t_time = memaccesstime_st_p(cfg->start_addr_a, iter_count, stride, offset_list);
-    avg_time += (((double) t_time));
+    avg_time += (((double) t_time)/50);
     v4time[s_index][m]+=(avg_time);
     enable_prefetch(cfg->core_a);
     goto out1;
@@ -294,9 +294,9 @@ out:
 int main(){
 FILE *file;
 file = fopen("output.txt", "a");
-for (int x=0; x<1; x++){
+for (int x=0; x<50; x++){
 int s_index = 0;
-for (int stride_m=1; stride_m<17; stride_m = (stride_m * 2)){
+for (int stride_m=1; stride_m<2; stride_m = (stride_m * 2)){
 int m = 0;
 for(long int j=1; j<10000000; j=(j*2)){
 m_test(80000000000, j, m, stride_m, s_index);
@@ -305,7 +305,7 @@ m=m+1;
 s_index++;
 }
 }
-for (int y = 0; y<5; y++){
+for (int y = 0; y<1; y++){
 for (int i = 0; i < 24; i++) {
   printf("%f ", v4time[y][i]);  // Print to stdout
   fprintf(file, "%f ", v4time[y][i]);  // Print to file
