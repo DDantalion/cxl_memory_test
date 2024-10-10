@@ -189,9 +189,9 @@ time_mread_nofence(void *adrs)
   return (int) time;
 }
 
-inline int get_rand(uint64_t *rd, uint64_t range) {
+int get_rand(uint64_t *rd, uint64_t range) {
     uint8_t ok;
-    for (int i = 0; i < RDRAND_MAX_RETRY; i++) {
+    for (int i = 0; i < 32; i++) {
         asm volatile(
             "rdrand %0\n\t"
             "setc   %1\n\t"
@@ -215,21 +215,7 @@ void generate_random_vector(uint64_t *vector, size_t size, uint64_t range) {
     }
 }
 
-void access_vector_sequentially(uint64_t *vector, size_t size) {
-    for (size_t i = 0; i < size; i++) {
-        uint64_t value;
-        asm volatile(
-            "mov %1, %%rax\n\t" // Move address of vector[i] to RAX
-            "mov (%%rax), %0\n\t" // Dereference RAX to get the value
-            : "=r"(value) // Output operand
-            : "r"(&vector[i]) // Input operand
-            : "%rax" // Clobbered register
-        );
-        printf("Value at index %zu: %llu\n", i, value);
-    }
-}
-
-uint32_t memaccesstime_p(char *v, uint64_t size, uint64_t stride, uint64_t *vector) {
+uint32_t memaccesstime_st_p(char *v, uint64_t size, uint64_t stride, uint64_t *vector) {
   uint32_t rv;
   asm volatile(
                 "xor %%r10, %%r10 \n"
@@ -238,7 +224,7 @@ uint32_t memaccesstime_p(char *v, uint64_t size, uint64_t stride, uint64_t *vect
                 "sfence\n"
                 "rdtscp\n"
                 "mov %%eax, %%esi\n"
-            "LOOP_access_s: \n"
+            "LOOP_access_st_p: \n"
             "sfence\n"
               "movq (%4, %%r10, 8), %%r11\n"  // r11 = vector[r10], scale by 8 (sizeof(uint64_t))
               "movl $10, (%1, %%r11)\n"       // Store 10 at address (v + vector[r10])
@@ -248,7 +234,7 @@ uint32_t memaccesstime_p(char *v, uint64_t size, uint64_t stride, uint64_t *vect
               "add %3, %1\n"
               "inc %%r10 \n"
               "cmp %2, %%r10 \n"
-            "jl LOOP_access_s \n"
+            "jl LOOP_access_st_p \n"
                "rdtscp\n"
                "sub %%esi, %%eax\n"
                : "=&a"(rv)
@@ -269,6 +255,10 @@ int m_test(long int buf_size,long int count, int m, int stride_m, int s_index){
     int ret;
     uint64_t iter_count;
     iter_count= (uint64_t)count;
+    uint64_t range = stride; // Upper limit for random numbers
+    uint64_t offset_list[iter_count];
+    // Generate random offset list
+    generate_random_vector(offset_list, iter_count, range);
     test_cfg_t* cfg;
     //printf("memory size: %ld Bytes, ",count);
     cfg = malloc(sizeof(test_cfg_t));
@@ -286,12 +276,8 @@ int m_test(long int buf_size,long int count, int m, int stride_m, int s_index){
         }
     }
     cfg->start_addr_a = &(cfg->buf_a[0]);
-    uint64_t range = stride; // Upper limit for random numbers
-    uint64_t offset_list[size];
-    // Generate random offset list
-    generate_random_vector(vector, iter_count, range);
     disable_prefetch(cfg->core_a);
-    t_time = memaccesstime_p(cfg->start_addr_a, iter_count, stride, offset_list);
+    t_time = memaccesstime_st_p(cfg->start_addr_a, iter_count, stride, offset_list);
     avg_time += (((double) t_time));
     v4time[s_index][m]+=(avg_time);
     enable_prefetch(cfg->core_a);
